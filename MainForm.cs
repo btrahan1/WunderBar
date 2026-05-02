@@ -94,7 +94,17 @@ namespace MofoBar
             this.FormBorderStyle = FormBorderStyle.None;
             this.StartPosition = FormStartPosition.Manual;
             this.TopMost = true;
-            this.ShowInTaskbar = false;
+            this.ShowInTaskbar = true; // Show in taskbar so we can see the icon
+
+            try
+            {
+                string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MofoBar.ico");
+                if (File.Exists(iconPath))
+                {
+                    this.Icon = new Icon(iconPath);
+                }
+            }
+            catch { }
             
             // Initial size and position (bottom dock style)
             int screenWidth = Screen.PrimaryScreen?.Bounds.Width ?? 1920;
