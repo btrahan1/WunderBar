@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MofoBar UI</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="mofo-container" class="glass-container">
+        <button id="win-btn" class="icon-btn" title="Start Menu">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M0 3.449L9.75 2.1V11.25H0V3.449zm0 8.551h9.75v9.15L0 19.801V12zm10.55 0h13.45v9.801l-13.45-1.902V12zm13.45-8.551V11.25H10.55V2.1l13.45 1.9z"/>
+            </svg>
+        </button>
+
+        <div class="divider"></div>
+
+        <button id="search-btn" class="icon-btn" title="Search Files (NTFS)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+        </button>
+
+        <button id="clipboard-btn" class="icon-btn" title="Clipboard History">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+        </button>
+
+        <button id="tree-btn" class="icon-btn" title="Folder Sizes (TreeSize)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12L2 12"></path><path d="M5.45 5.11L2 12L5.45 18.89"></path><path d="M19 5L22 12L19 19"></path>
+            </svg>
+        </button>
+        
+        <div class="divider"></div>
+        
+        <div id="pinned-apps" class="app-section"></div>
+        <div class="divider"></div>
+        <div id="open-apps" class="app-section"></div>
+        
+        <div class="divider"></div>
+
+        <div class="vitals-section" onclick="mofo.ShowFlyout('vitals', event.clientX, event.clientY)">
+            <div class="vital-item">
+                <canvas id="cpu-chart" width="60" height="30"></canvas>
+                <span class="vital-label">CPU</span>
+            </div>
+            <div class="vital-item">
+                <canvas id="ram-chart" width="60" height="30"></canvas>
+                <span class="vital-label">RAM</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

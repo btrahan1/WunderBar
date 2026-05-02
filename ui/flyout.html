@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MofoFlyout</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background: transparent !important; 
+            margin: 0; padding: 0; 
+            width: 100vw; height: 100vh;
+            display: block !important;
+        }
+        .popover-panel {
+            position: absolute !important;
+            top: 0; left: 0;
+            width: 100% !important; height: 100% !important;
+            transform: none !important;
+            bottom: auto !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="search-panel" class="popover-panel hidden">
+        <input type="text" id="search-input" placeholder="Search MFT..." autofocus>
+        <div id="search-results" class="results-list"></div>
+    </div>
+
+    <div id="clipboard-panel" class="popover-panel hidden">
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Clipboard History</span>
+            <button class="clear-btn" onclick="mofo.ClearClipboard()">Clear All</button>
+        </div>
+        <div id="clipboard-results" class="results-list"></div>
+    </div>
+
+    <div id="tree-panel" class="popover-panel hidden">
+        <div class="panel-header">Disk Usage (C:)</div>
+        <div id="admin-warning" class="hidden" style="color: #ff4d4d; padding: 8px 15px; font-size: 11px; background: rgba(255, 77, 77, 0.1); border-bottom: 1px solid rgba(255, 77, 77, 0.2);">
+            ⚠️ Administrator privileges required for MFT scanning.
+        </div>
+        <div id="tree-path" class="result-path" style="padding: 10px 15px;">C:\</div>
+        <div id="tree-results" class="results-list"></div>
+    </div>
+
+    <div id="vitals-panel" class="popover-panel hidden">
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Task Manager</span>
+            <span id="vitals-summary" style="font-size: 11px; opacity: 0.6;">CPU: 0% | RAM: 0%</span>
+        </div>
+        <div style="padding: 0 15px 10px 15px;">
+            <input type="text" id="vitals-search" placeholder="Filter processes..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px;">
+        </div>
+        <div id="vitals-results" class="results-list"></div>
+    </div>
+
+    <script>
+        const mofo = window.chrome.webview.hostObjects.mofo;
+        const searchPanel = document.getElementById('search-panel');
+        const clipboardPanel = document.getElementById('clipboard-panel');
+        const treePanel = document.getElementById('tree-panel');
+        const vitalsPanel = document.getElementById('vitals-panel');
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        const clipboardResults = document.getElementById('clipboard-results');
+        const treeResults = document.getElementById('tree-results');
+        const vitalsResults = document.getElementById('vitals-results');
+        const vitalsSummary = document.getElementById('vitals-summary');
+        const vitalsSearch = document.getElementById('vitals-search');
+        const treePathEl = document.getElementById('tree-path');
+        const adminWarning = document.getElementById('admin-warning');
+
+        let currentTreePath = "C:\\";
+        let vitalsFilter = "";
+
+        vitalsSearch.addEventListener('input', (e) => {
+            vitalsFilter = e.target.value.toLowerCase();
+            refreshVitalsPanel();
+        });
+
+        window.showPanel = async (type) => {
+            // Optimization: Hide all first to prevent layout flicker
+            [searchPanel, clipboardPanel, treePanel, vitalsPanel].forEach(p => p.classList.add('hidden'));
+            
+            const panel = type === 'search' ? searchPanel : 
+                         (type === 'clipboard' ? clipboardPanel : 
+                         (type === 'tree' ? treePanel : vitalsPanel));
+            panel.classList.remove('hidden');
+
+            if (type === 'search') {
+                const isAdmin = await mofo.IsAdmin();
+                if (!isAdmin) {
+                    searchResults.innerHTML = `<div style="color: #ff4d4d; padding: 15px; font-size: 11px; background: rgba(255, 77, 77, 0.1); margin: 12px; border-radius: 8px; border: 1px solid rgba(255, 77, 77, 0.2);">⚠️ Administrator privileges required for MFT search.</div>`;
+                } else {
+                    searchInput.value = '';
+                    searchResults.innerHTML = '';
+                    setTimeout(() => searchInput.focus(), 50);
+                }
+            } else if (type === 'clipboard') {
+                refreshClipboard();
+            } else if (type === 'vitals') {
+                refreshVitalsPanel();
+                const interval = setInterval(() => {
+                    if (vitalsPanel.classList.contains('hidden')) {
+                        clearInterval(interval);
+                        return;
+                    }
+                    refreshVitalsPanel();
+                }, 2000);
+            } else if (type === 'tree') {
+                const isAdmin = await mofo.IsAdmin();
+                adminWarning.classList.toggle('hidden', isAdmin);
+                if (!isAdmin) {
+                    treeResults.innerHTML = '';
+                    treePathEl.innerText = '';
+                    return;
+                }
+
+                if (await mofo.IsIndexing() || await mofo.IsCalculatingSizes()) {
+                    treeResults.innerHTML = `<div class="empty-state">
+                        <div class="spinner"></div>
+                        <p id="status-msg">Indexing Drive C: ...</p>
+                        <small id="index-count">${await mofo.GetIndexedFileCount()}</small> files found
+                    </div>`;
+                    
+                    const interval = setInterval(async () => {
+                        if (treePanel.classList.contains('hidden')) {
+                            clearInterval(interval);
+                            return;
+                        }
+
+                        const isIndexing = await mofo.IsIndexing();
+                        const isSizing = await mofo.IsCalculatingSizes();
+                        const count = await mofo.GetIndexedFileCount();
+                        
+                        const msgEl = document.getElementById('status-msg');
+                        const countEl = document.getElementById('index-count');
+                        
+                        if (msgEl) msgEl.innerText = isIndexing ? "Indexing Drive C: ..." : "Pre-calculating folder sizes...";
+                        if (countEl) countEl.innerText = count.toLocaleString();
+                        
+                        if (!isIndexing && !isSizing) {
+                            clearInterval(interval);
+                            refreshTree(currentTreePath);
+                        }
+                    }, 500);
+                } else {
+                    refreshTree(currentTreePath);
+                }
+            }
+        };
+
+        async function refreshTree(path) {
+            currentTreePath = path;
+            treePathEl.innerText = path;
+            treeResults.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Calculating sizes...</p></div>`;
+            const treeData = JSON.parse(await mofo.GetSizeTree(path) || "{}");
+            renderTree(treeData);
+        }
+
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function renderTree(node) {
+            const children = node.Children || [];
+            const maxChildSize = children.length > 0 ? children[0].Size : 1;
+
+            treeResults.innerHTML = children.map(child => {
+                const pct = (child.Size / maxChildSize) * 100;
+                return `
+                    <div class="result-item" onclick="${child.IsFolder ? `refreshTree('${child.Path.replace(/\\/g, '\\\\')}')` : ''}">
+                        <div class="result-info" style="flex: 1;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span class="result-name">${child.IsFolder ? '📁' : '📄'} ${child.Name}</span>
+                                <span class="result-path" style="color: #fff;">${formatSize(child.Size)}</span>
+                            </div>
+                            <div class="bar-track" style="height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-top: 4px;">
+                                <div class="bar-fill" style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #0078d4, #40a0f0); border-radius: 2px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Add a "Back" button if not at root
+            if (currentTreePath.length > 3) {
+                const parentPath = currentTreePath.substring(0, currentTreePath.lastIndexOf('\\')) || "C:\\";
+                const backBtn = document.createElement('div');
+                backBtn.className = 'result-item';
+                backBtn.style.opacity = '0.6';
+                backBtn.innerHTML = `<div class="result-info"><span>⬅️ Back to ..</span></div>`;
+                backBtn.onclick = () => refreshTree(parentPath);
+                treeResults.prepend(backBtn);
+            }
+        }
+
+        // Search Logic
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value;
+            if (query.length < 2) {
+                searchResults.innerHTML = '';
+                return;
+            }
+            searchTimeout = setTimeout(async () => {
+                const results = JSON.parse(await mofo.SearchFiles(query) || "[]");
+                searchResults.innerHTML = results.map(res => `
+                    <div class="result-item" 
+                         onclick="mofo.LaunchApp('${res.Path.replace(/\\/g, '\\\\')}')"
+                         oncontextmenu="event.preventDefault(); mofo.ShowFileResultMenu('${res.Path.replace(/\\/g, '\\\\')}', event.clientX, event.clientY)">
+                        <div class="result-info">
+                            <span class="result-name">${res.Name}</span>
+                            <span class="result-path">${res.Path}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }, 300);
+        });
+
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        const clipStore = new Map();
+
+        async function refreshClipboard() {
+            const history = JSON.parse(await mofo.GetClipboardHistory() || "[]");
+            clipStore.clear();
+            
+            clipboardResults.innerHTML = history.map((item, index) => {
+                const id = `clip_${index}`;
+                clipStore.set(id, item.Text);
+                
+                let displayText = "";
+                if (!item.ImageBase64) {
+                    // Force a hard limit on characters and replace all line breaks
+                    displayText = item.Text.substring(0, 150).replace(/[\r\n]/g, " ").trim();
+                    if (item.Text.length > 150) displayText += "...";
+                }
+                
+                return `
+                <div class="clip-item" oncontextmenu="event.preventDefault(); showClipMenu(event, '${id}', '${item.ImageBase64 || ""}')">
+                    ${item.ImageBase64 ? 
+                        `<img src="data:image/png;base64,${item.ImageBase64}" class="clip-img" onclick="copyImageToClip('${item.ImageBase64}')">` : 
+                        `<span class="clip-text" title="Click to copy full text" onclick="copyToClipById('${id}')">${displayText}</span>`
+                    }
+                    <span class="pin-btn ${item.IsPinned ? 'pinned' : ''}" onclick="togglePinById('${id}', '${item.ImageBase64 || ""}', ${!item.IsPinned})">
+                        📌
+                    </span>
+                </div>
+            `}).join('');
+        }
+
+        async function refreshVitalsPanel() {
+            const vitals = JSON.parse(await mofo.GetVitals() || "{}");
+            vitalsSummary.innerText = `CPU: ${vitals.Cpu}% | RAM: ${vitals.Ram}%`;
+
+            let processes = JSON.parse(await mofo.GetProcesses() || "[]");
+            if (vitalsFilter) {
+                processes = processes.filter(p => p.Name.toLowerCase().includes(vitalsFilter) || (p.Title && p.Title.toLowerCase().includes(vitalsFilter)));
+            }
+
+            vitalsResults.innerHTML = processes.slice(0, 100).map(p => `
+                <div class="result-item" style="cursor: default;">
+                    <div class="result-info" style="flex: 1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="result-name" title="${p.Title || p.Name}">${p.IsApp ? '⚡ ' : ''}${p.Name}</span>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="result-path" style="color: #fff; font-weight: bold; margin-right: 5px;">${p.RamUsage} MB</span>
+                                <button class="clear-btn" style="padding: 2px 6px; font-size: 9px;" onclick="pauseProcess(${p.Id})" title="Pause (Suspend)">⏸️</button>
+                                <button class="clear-btn" style="padding: 2px 6px; font-size: 9px;" onclick="resumeProcess(${p.Id})" title="Resume">▶️</button>
+                                <button class="clear-btn" style="padding: 2px 6px; font-size: 9px; background: rgba(255, 77, 77, 0.1);" onclick="killProcess(${p.Id})" title="Kill">❌</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.killProcess = async (id) => {
+            if (confirm(`Kill process ${id}?`)) {
+                await mofo.KillProcess(id);
+                refreshVitalsPanel();
+            }
+        };
+
+        window.pauseProcess = async (id) => {
+            await mofo.SuspendProcess(id);
+            refreshVitalsPanel();
+        };
+
+        window.resumeProcess = async (id) => {
+            await mofo.ResumeProcess(id);
+            refreshVitalsPanel();
+        };
+
+        window.showClipMenu = (e, id, img) => {
+            const text = clipStore.get(id) || "";
+            mofo.ShowClipContextMenu(text, img, e.clientX, e.clientY);
+        };
+
+        window.copyToClipById = (id) => {
+            const text = clipStore.get(id);
+            if (text) mofo.SetClipboard(text);
+        };
+
+        window.togglePinById = async (id, img, pin) => {
+            const text = clipStore.get(id);
+            await mofo.PinClip(text || "", img, pin);
+            refreshClipboard();
+        };
+
+        window.copyImageToClip = (base64) => mofo.SetClipboardImage(base64);
+
+        window.chrome.webview.addEventListener('message', event => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'clipboard') refreshClipboard();
+        });
+    </script>
+</body>
+</html>

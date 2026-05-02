@@ -1,0 +1,15 @@
+# Visual Studio
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.userosscache
+*.sln.docstates
+
+# WebView2
+*.exe.WebView2/
+EBWebView/
+
+# OS files
+Thumbs.db
+Desktop.ini
