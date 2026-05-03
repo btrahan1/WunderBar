@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace MofoBar
+namespace WunderBar
 {
     public class MetricsService
     {
@@ -69,12 +69,23 @@ namespace MofoBar
             return 0;
         }
 
+        public object GetBatteryStatus()
+        {
+            var power = System.Windows.Forms.SystemInformation.PowerStatus;
+            return new
+            {
+                Percent = (int)(power.BatteryLifePercent * 100),
+                IsCharging = power.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online
+            };
+        }
+
         public object GetVitals()
         {
             return new
             {
                 Cpu = GetCpuUsage(),
-                Ram = GetRamUsage()
+                Ram = GetRamUsage(),
+                Battery = GetBatteryStatus()
             };
         }
     }

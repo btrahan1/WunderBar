@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MofoBar UI</title>
+    <title>WunderBar</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="mofo-container" class="glass-container">
-        <img src="icon.png" class="mofo-logo" title="MofoBar Performance Suite">
+    <div id="wunder-container" class="glass-container">
+        <img src="wunder_icon.png" class="wunder-logo" title="WunderBar Performance Suite">
         <button id="win-btn" class="icon-btn" title="Start Menu">
             <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M0 3.449L9.75 2.1V11.25H0V3.449zm0 8.551h9.75v9.15L0 19.801V12zm10.55 0h13.45v9.801l-13.45-1.902V12zm13.45-8.551V11.25H10.55V2.1l13.45 1.9z"/>
@@ -53,7 +53,7 @@
         
         <div class="divider"></div>
 
-        <div class="vitals-section" onclick="mofo.ShowFlyout('vitals', event.clientX, event.clientY)">
+        <div class="vitals-section" onclick="wunder.ShowFlyout('vitals', event.clientX, event.clientY)">
             <div class="vital-item">
                 <canvas id="cpu-chart" width="60" height="30"></canvas>
                 <span class="vital-label">CPU</span>

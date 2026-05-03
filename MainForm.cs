@@ -6,16 +6,17 @@ using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Web.WebView2.Core;
 using System.IO;
 
-namespace MofoBar
+namespace WunderBar
 {
     public partial class MainForm : Form
     {
         private WebView2? _webView;
-        private MofoBackend? _backend;
+        private WunderBackend _backend;
         private FlyoutForm? _flyout;
         public string CurrentDockSide = "bottom";
         public bool IsSystemMoving = false;
         public WebView2? GetWebView() => _webView;
+        public FlyoutForm? GetFlyout() => _flyout;
 
         public MainForm()
         {
@@ -90,7 +91,7 @@ namespace MofoBar
 
         private void InitializeForm()
         {
-            this.Text = "MofoBar";
+            this.Text = "WunderBar";
             this.FormBorderStyle = FormBorderStyle.None;
             this.StartPosition = FormStartPosition.Manual;
             this.TopMost = true;
@@ -98,7 +99,7 @@ namespace MofoBar
 
             try
             {
-                string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MofoBar.ico");
+                string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WunderBar.ico");
                 if (File.Exists(iconPath))
                 {
                     this.Icon = new Icon(iconPath);
@@ -135,15 +136,13 @@ namespace MofoBar
             // Map a virtual host to the UI folder to avoid file:// security issues
             string uiPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ui");
             _webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
-                "mofobar.local", uiPath, CoreWebView2HostResourceAccessKind.Allow);
-
-            _backend = new MofoBackend(this);
-            _webView.CoreWebView2.AddHostObjectToScript("mofo", _backend);
+                "wunderbar.local", uiPath, CoreWebView2HostResourceAccessKind.Allow);
+            _webView.CoreWebView2.Navigate("https://wunderbar.local/index.html");
+            _backend = new WunderBackend(this);
+            _webView.CoreWebView2.AddHostObjectToScript("wunder", _backend);
             _webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
 
             _flyout = new FlyoutForm(_backend);
-
-            _webView.CoreWebView2.Navigate("https://mofobar.local/index.html");
         }
 
         public void ShowFlyout(string type, int x, int y)
@@ -152,12 +151,41 @@ namespace MofoBar
                 if (_flyout != null)
                 {
                     int width = type == "vitals" ? 600 : 400;
+                    int height = 500;
                     _flyout.Width = width;
+                    _flyout.Height = height;
+
+                    Point clickPoint = this.PointToScreen(new Point(x, y));
+                    Screen screen = Screen.FromPoint(clickPoint);
                     
-                    Point p = this.PointToScreen(new Point(x, y));
-                    p.Y -= 510; 
-                    p.X -= (width / 2); // Center based on dynamic width
-                    _flyout.ShowAt(type, p);
+                    int flyoutX = clickPoint.X - (width / 2);
+                    int flyoutY = clickPoint.Y;
+
+                    // Adjust based on dock side
+                    if (CurrentDockSide == "bottom")
+                    {
+                        flyoutY = this.Top - height - 10;
+                    }
+                    else if (CurrentDockSide == "top")
+                    {
+                        flyoutY = this.Bottom + 10;
+                    }
+                    else if (CurrentDockSide == "left")
+                    {
+                        flyoutX = this.Right + 10;
+                        flyoutY = clickPoint.Y - (height / 2);
+                    }
+                    else if (CurrentDockSide == "right")
+                    {
+                        flyoutX = this.Left - width - 10;
+                        flyoutY = clickPoint.Y - (height / 2);
+                    }
+
+                    // Boundary checking (Clamp to WorkingArea)
+                    flyoutX = Math.Max(screen.WorkingArea.Left + 10, Math.Min(flyoutX, screen.WorkingArea.Right - width - 10));
+                    flyoutY = Math.Max(screen.WorkingArea.Top + 10, Math.Min(flyoutY, screen.WorkingArea.Bottom - height - 10));
+
+                    _flyout.ShowAt(type, new Point(flyoutX, flyoutY));
                 }
             });
         }

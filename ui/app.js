@@ -1,7 +1,7 @@
-const mofo = window.chrome.webview.hostObjects.mofo;
+const wunder = window.chrome.webview.hostObjects.wunder;
 
 async function init() {
-    console.log("Initializing MofoBar UI...");
+    console.log("Initializing wunderBar UI...");
     setupEventListeners();
     await refreshData();
     setInterval(refreshData, 5000); 
@@ -12,15 +12,15 @@ async function init() {
         if (appItem) {
             const app = JSON.parse(appItem.dataset.raw);
             const isPinned = appItem.parentElement.id === 'pinned-apps';
-            mofo.ShowAppMenu(app.Handle || 0, app.Title || app.Name, isPinned, app.ExePath || "", e.clientX, e.clientY);
+            wunder.ShowAppMenu(app.Handle || 0, app.Title || app.Name, isPinned, app.ExePath || "", e.clientX, e.clientY);
         } else {
-            mofo.ShowGlobalMenu(e.clientX, e.clientY);
+            wunder.ShowGlobalMenu(e.clientX, e.clientY);
         }
     });
 
     document.addEventListener('mousedown', (e) => {
         if (e.target.tagName === 'BODY' || e.target.classList.contains('divider')) {
-            mofo.StartDrag();
+            wunder.StartDrag();
         }
     });
 }
@@ -28,7 +28,7 @@ async function init() {
 function setupEventListeners() {
     document.getElementById('win-btn').addEventListener('click', async () => {
         console.log("Win Button clicked");
-        await mofo.SimulateWinKey();
+        await wunder.SimulateWinKey();
     });
 
     // Panels
@@ -37,17 +37,17 @@ function setupEventListeners() {
     const treeBtn = document.getElementById('tree-btn');
 
     searchBtn.addEventListener('click', (e) => {
-        mofo.ShowFlyout('search', e.clientX, e.clientY);
+        wunder.ShowFlyout('search', e.clientX, e.clientY);
     });
     clipboardBtn.addEventListener('click', (e) => {
-        mofo.ShowFlyout('clipboard', e.clientX, e.clientY);
+        wunder.ShowFlyout('clipboard', e.clientX, e.clientY);
     });
     document.getElementById('tree-btn').onclick = (e) => {
-        mofo.ShowFlyout('tree', e.clientX, e.clientY);
+        wunder.ShowFlyout('tree', e.clientX, e.clientY);
     };
 
     document.getElementById('tray-btn').onclick = (e) => {
-        mofo.ShowFlyout('tray', e.clientX, e.clientY);
+        wunder.ShowFlyout('tray', e.clientX, e.clientY);
     };
 
     // Listen for backend messages (Clipboard updates)
@@ -63,7 +63,7 @@ function setupEventListeners() {
 }
 
 window.setOrientation = function(side) {
-    const container = document.getElementById('mofo-container');
+    const container = document.getElementById('wunder-container');
     container.classList.remove('top', 'bottom', 'left', 'right');
     container.classList.add(side);
     
@@ -74,8 +74,8 @@ window.setOrientation = function(side) {
 async function refreshData() {
     try {
         console.log("Refreshing data...");
-        const pinnedJson = await mofo.GetPinnedApps();
-        const openJson = await mofo.GetOpenWindows();
+        const pinnedJson = await wunder.GetPinnedApps();
+        const openJson = await wunder.GetOpenWindows();
         
         const pinned = JSON.parse(pinnedJson || "[]");
         const open = JSON.parse(openJson || "[]");
@@ -87,7 +87,7 @@ async function refreshData() {
 
         // Resize the host window to fit the content
         setTimeout(async () => {
-            const container = document.getElementById('mofo-container');
+            const container = document.getElementById('wunder-container');
             const isVertical = container.classList.contains('left') || container.classList.contains('right');
             
             let width, height;
@@ -98,7 +98,7 @@ async function refreshData() {
                 width = Math.ceil(container.scrollWidth) + 150;
                 height = 140;
             }
-            await mofo.ResizeWindow(width, height);
+            await wunder.ResizeWindow(width, height);
         }, 100);
 
     } catch (e) {
@@ -122,7 +122,7 @@ function renderPinnedApps(apps) {
             div.innerHTML = `<div class="app-icon-placeholder">${app.Name[0]}</div>`;
         }
         
-        div.addEventListener('click', () => mofo.LaunchApp(app.Path));
+        div.addEventListener('click', () => wunder.LaunchApp(app.Path));
         container.appendChild(div);
     });
 }
@@ -154,7 +154,7 @@ function renderOpenApps(apps) {
             div.innerHTML = `<div class="app-icon-placeholder" style="background: linear-gradient(135deg, #2ecc71, #27ae60)">${app.Title[0]}</div>`;
         }
         
-        div.addEventListener('click', () => mofo.FocusWindow(app.Handle));
+        div.addEventListener('click', () => wunder.FocusWindow(app.Handle));
         container.appendChild(div);
     });
 }
@@ -215,7 +215,7 @@ function drawChart(canvasId, history, newValue, color) {
 
 async function refreshVitals() {
     try {
-        const vitalsJson = await mofo.GetVitals();
+        const vitalsJson = await wunder.GetVitals();
         const vitals = JSON.parse(vitalsJson);
         updateCharts(vitals);
     } catch(e) {}

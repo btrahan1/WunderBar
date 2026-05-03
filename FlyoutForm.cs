@@ -6,14 +6,15 @@ using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Web.WebView2.Core;
 using System.IO;
 
-namespace MofoBar
+namespace WunderBar
 {
     public class FlyoutForm : Form
     {
         private WebView2 _webView;
         private string _currentType = "";
+        public WebView2 GetWebView() => _webView;
 
-        public FlyoutForm(MofoBackend backend)
+        public FlyoutForm(WunderBackend backend)
         {
             this.FormBorderStyle = FormBorderStyle.None;
             this.StartPosition = FormStartPosition.Manual;
@@ -32,13 +33,13 @@ namespace MofoBar
             EnableBlur();
         }
 
-        private async void InitializeWebView(MofoBackend backend)
+        private async void InitializeWebView(WunderBackend backend)
         {
             await _webView.EnsureCoreWebView2Async();
             string uiPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ui");
-            _webView.CoreWebView2.SetVirtualHostNameToFolderMapping("mofobar.local", uiPath, CoreWebView2HostResourceAccessKind.Allow);
-            _webView.CoreWebView2.AddHostObjectToScript("mofo", backend);
-            _webView.CoreWebView2.Navigate("https://mofobar.local/flyout.html");
+            _webView.CoreWebView2.SetVirtualHostNameToFolderMapping("wunderbar.local", uiPath, CoreWebView2HostResourceAccessKind.Allow);
+            _webView.CoreWebView2.AddHostObjectToScript("wunder", backend);
+            _webView.CoreWebView2.Navigate("https://wunderbar.local/flyout.html");
         }
 
         public void ShowAt(string type, Point location)

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MofoFlyout</title>
+    <title>wunderFlyout</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,7 +33,7 @@
     <div id="clipboard-panel" class="popover-panel hidden">
         <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
             <span>Clipboard History</span>
-            <button class="clear-btn" onclick="mofo.ClearClipboard()">Clear All</button>
+            <button class="clear-btn" onclick="wunder.ClearClipboard()">Clear All</button>
         </div>
         <div id="clipboard-results" class="results-list"></div>
     </div>
@@ -50,27 +50,27 @@
     <div id="tray-panel" class="popover-panel hidden">
         <div class="panel-header">System Controls</div>
         <div class="tray-grid">
-            <div class="tray-item" onclick="mofo.OpenSystemControl('volume')">
+            <div class="tray-item" onclick="wunder.OpenSystemControl('volume')">
                 <div class="tray-icon">🔊</div>
                 <div class="tray-name">Volume</div>
             </div>
-            <div class="tray-item" onclick="mofo.OpenSystemControl('wifi')">
+            <div class="tray-item" onclick="wunder.OpenSystemControl('wifi')">
                 <div class="tray-icon">📶</div>
                 <div class="tray-name">Wi-Fi</div>
             </div>
-            <div class="tray-item" onclick="mofo.OpenSystemControl('bluetooth')">
+            <div class="tray-item" onclick="wunder.OpenSystemControl('bluetooth')">
                 <div class="tray-icon">🦷</div>
                 <div class="tray-name">Bluetooth</div>
             </div>
-            <div class="tray-item" onclick="mofo.OpenSystemControl('battery')">
+            <div class="tray-item" onclick="wunder.OpenSystemControl('battery')">
                 <div class="tray-icon">🔋</div>
-                <div class="tray-name">Power</div>
+                <div class="tray-name" id="tray-power-label">Power</div>
             </div>
-            <div class="tray-item" onclick="mofo.OpenSystemControl('display')">
+            <div class="tray-item" onclick="wunder.OpenSystemControl('display')">
                 <div class="tray-icon">🖥️</div>
                 <div class="tray-name">Display</div>
             </div>
-            <div class="tray-item" onclick="mofo.OpenSystemControl('updates')">
+            <div class="tray-item" onclick="wunder.OpenSystemControl('updates')">
                 <div class="tray-icon">🔄</div>
                 <div class="tray-name">Updates</div>
             </div>
@@ -92,7 +92,7 @@
     </div>
 
     <script>
-        const mofo = window.chrome.webview.hostObjects.mofo;
+        const wunder = window.chrome.webview.hostObjects.wunder;
         const searchPanel = document.getElementById('search-panel');
         const clipboardPanel = document.getElementById('clipboard-panel');
         const treePanel = document.getElementById('tree-panel');
@@ -117,6 +117,16 @@
             refreshVitalsPanel();
         });
 
+        // Real-time updates from backend
+        if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.addEventListener('message', event => {
+                const msg = event.data;
+                if (msg.type === 'clipboard') {
+                    renderClipboard(msg.data);
+                }
+            });
+        }
+
         window.showPanel = async (type) => {
             // Optimization: Hide all first to prevent layout flicker
             [searchPanel, clipboardPanel, treePanel, vitalsPanel, trayPanel].forEach(p => p.classList.add('hidden'));
@@ -128,7 +138,7 @@
             panel.classList.remove('hidden');
 
             if (type === 'search') {
-                const isAdmin = await mofo.IsAdmin();
+                const isAdmin = await wunder.IsAdmin();
                 if (!isAdmin) {
                     searchResults.innerHTML = `<div style="color: #ff4d4d; padding: 15px; font-size: 11px; background: rgba(255, 77, 77, 0.1); margin: 12px; border-radius: 8px; border: 1px solid rgba(255, 77, 77, 0.2);">⚠️ Administrator privileges required for MFT search.</div>`;
                 } else {
@@ -157,7 +167,7 @@
                     refreshTrayApps();
                 }, 5000);
             } else if (type === 'tree') {
-                const isAdmin = await mofo.IsAdmin();
+                const isAdmin = await wunder.IsAdmin();
                 adminWarning.classList.toggle('hidden', isAdmin);
                 if (!isAdmin) {
                     treeResults.innerHTML = '';
@@ -165,11 +175,11 @@
                     return;
                 }
 
-                if (await mofo.IsIndexing() || await mofo.IsCalculatingSizes()) {
+                if (await wunder.IsIndexing() || await wunder.IsCalculatingSizes()) {
                     treeResults.innerHTML = `<div class="empty-state">
                         <div class="spinner"></div>
                         <p id="status-msg">Indexing Drive C: ...</p>
-                        <small id="index-count">${await mofo.GetIndexedFileCount()}</small> files found
+                        <small id="index-count">${await wunder.GetIndexedFileCount()}</small> files found
                     </div>`;
                     
                     const interval = setInterval(async () => {
@@ -178,9 +188,9 @@
                             return;
                         }
 
-                        const isIndexing = await mofo.IsIndexing();
-                        const isSizing = await mofo.IsCalculatingSizes();
-                        const count = await mofo.GetIndexedFileCount();
+                        const isIndexing = await wunder.IsIndexing();
+                        const isSizing = await wunder.IsCalculatingSizes();
+                        const count = await wunder.GetIndexedFileCount();
                         
                         const msgEl = document.getElementById('status-msg');
                         const countEl = document.getElementById('index-count');
@@ -203,7 +213,7 @@
             currentTreePath = path;
             treePathEl.innerText = path;
             treeResults.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Calculating sizes...</p></div>`;
-            const treeData = JSON.parse(await mofo.GetSizeTree(path) || "{}");
+            const treeData = JSON.parse(await wunder.GetSizeTree(path) || "{}");
             renderTree(treeData);
         }
 
@@ -258,11 +268,11 @@
                 return;
             }
             searchTimeout = setTimeout(async () => {
-                const results = JSON.parse(await mofo.SearchFiles(query) || "[]");
+                const results = JSON.parse(await wunder.SearchFiles(query) || "[]");
                 searchResults.innerHTML = results.map(res => `
                     <div class="result-item" 
-                         onclick="mofo.LaunchApp('${res.Path.replace(/\\/g, '\\\\')}')"
-                         oncontextmenu="event.preventDefault(); mofo.ShowFileResultMenu('${res.Path.replace(/\\/g, '\\\\')}', event.clientX, event.clientY)">
+                         onclick="wunder.LaunchApp('${res.Path.replace(/\\/g, '\\\\')}')"
+                         oncontextmenu="event.preventDefault(); wunder.ShowFileResultMenu('${res.Path.replace(/\\/g, '\\\\')}', event.clientX, event.clientY)">
                         <div class="result-info">
                             <span class="result-name">${res.Name}</span>
                             <span class="result-path">${res.Path}</span>
@@ -277,7 +287,7 @@
         const clipStore = new Map();
 
         async function refreshClipboard() {
-            const history = JSON.parse(await mofo.GetClipboardHistory() || "[]");
+            const history = JSON.parse(await wunder.GetClipboardHistory() || "[]");
             clipStore.clear();
             
             clipboardResults.innerHTML = history.map((item, index) => {
@@ -305,10 +315,22 @@
         }
 
         async function refreshVitalsPanel() {
-            const vitals = JSON.parse(await mofo.GetVitals() || "{}");
-            vitalsSummary.innerText = `CPU: ${vitals.Cpu}% | RAM: ${vitals.Ram}%`;
+            const vitals = JSON.parse(await wunder.GetVitals());
+            
+            // Update summary charts
+            updateChart(cpuChart, vitals.Cpu, [210, 100, 60]);
+            updateChart(ramChart, vitals.Ram, [142, 68, 173]);
+            
+            vitalsSummary.innerHTML = `CPU: ${vitals.Cpu.toFixed(1)}% | RAM: ${vitals.Ram.toFixed(1)}%`;
 
-            let processes = JSON.parse(await mofo.GetProcesses() || "[]");
+            // Update Tray Labels if visible
+            const powerLabel = document.getElementById('tray-power-label');
+            if (powerLabel && vitals.Battery) {
+                const b = vitals.Battery;
+                powerLabel.innerText = `${b.Percent}%${b.IsCharging ? ' ⚡' : ''}`;
+            }
+
+            let processes = JSON.parse(await wunder.GetProcesses() || "[]");
             if (vitalsFilter) {
                 processes = processes.filter(p => p.Name.toLowerCase().includes(vitalsFilter) || (p.Title && p.Title.toLowerCase().includes(vitalsFilter)));
             }
@@ -332,23 +354,23 @@
 
         window.killProcess = async (id) => {
             if (confirm(`Kill process ${id}?`)) {
-                await mofo.KillProcess(id);
+                await wunder.KillProcess(id);
                 refreshVitalsPanel();
             }
         };
 
         window.pauseProcess = async (id) => {
-            await mofo.SuspendProcess(id);
+            await wunder.SuspendProcess(id);
             refreshVitalsPanel();
         };
 
         window.resumeProcess = async (id) => {
-            await mofo.ResumeProcess(id);
+            await wunder.ResumeProcess(id);
             refreshVitalsPanel();
         };
 
         async function refreshTrayApps() {
-            const icons = JSON.parse(await mofo.GetTrayIcons() || "[]");
+            const icons = JSON.parse(await wunder.GetTrayIcons() || "[]");
             trayApps.innerHTML = icons.map(icon => `
                 <div class="result-item" onclick="clickTrayIcon('${icon.Name.replace(/'/g, "\\'")}')">
                     <div class="result-info">
@@ -364,26 +386,26 @@
         }
 
         window.clickTrayIcon = async (name) => {
-            await mofo.ClickTrayIcon(name);
+            await wunder.ClickTrayIcon(name);
         };
 
         window.showClipMenu = (e, id, img) => {
             const text = clipStore.get(id) || "";
-            mofo.ShowClipContextMenu(text, img, e.clientX, e.clientY);
+            wunder.ShowClipContextMenu(text, img, e.clientX, e.clientY);
         };
 
         window.copyToClipById = (id) => {
             const text = clipStore.get(id);
-            if (text) mofo.SetClipboard(text);
+            if (text) wunder.SetClipboard(text);
         };
 
         window.togglePinById = async (id, img, pin) => {
             const text = clipStore.get(id);
-            await mofo.PinClip(text || "", img, pin);
+            await wunder.PinClip(text || "", img, pin);
             refreshClipboard();
         };
 
-        window.copyImageToClip = (base64) => mofo.SetClipboardImage(base64);
+        window.copyImageToClip = (base64) => wunder.SetClipboardImage(base64);
 
         window.chrome.webview.addEventListener('message', event => {
             const msg = JSON.parse(event.data);

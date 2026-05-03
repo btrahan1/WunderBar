@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows.Forms;
 
-namespace MofoBar
+namespace WunderBar
 {
     public class ClipItem
     {

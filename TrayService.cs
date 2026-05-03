@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Windows.Automation;
 using System.Linq;
 
-namespace MofoBar
+namespace WunderBar
 {
     public class TrayIconInfo
     {

@@ -11,10 +11,10 @@ using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
 using System.Linq;
 
-namespace MofoBar
+namespace WunderBar
 {
     [ComVisible(true)]
-    public class MofoBackend
+    public class WunderBackend
     {
         private readonly MainForm _form;
         private readonly Dictionary<string, string> _iconCache = new();
@@ -24,13 +24,20 @@ namespace MofoBar
         private readonly ProcessService _processes = new ProcessService();
         private readonly TrayService _tray = new TrayService();
 
-        public MofoBackend(MainForm form)
+        public WunderBackend(MainForm form)
         {
             _form = form;
             _clipboard.HistoryChanged += () => {
                 _form.Invoke(() => {
-                    if (!_form.IsDisposed)
-                        _form.GetWebView().CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "clipboard", data = _clipboard.GetHistory() }));
+                    if (_form.IsDisposed) return;
+                    
+                    string json = JsonSerializer.Serialize(new { type = "clipboard", data = _clipboard.GetHistory() });
+                    
+                    // Update main bar (if needed)
+                    _form.GetWebView()?.CoreWebView2?.PostWebMessageAsJson(json);
+                    
+                    // Update flyout
+                    _form.GetFlyout()?.GetWebView()?.CoreWebView2?.PostWebMessageAsJson(json);
                 });
             };
 
@@ -247,7 +254,7 @@ namespace MofoBar
                         if (hWnd != IntPtr.Zero)
                         {
                             string title = proc.MainWindowTitle;
-                            if (!string.IsNullOrEmpty(title) && title != "MofoBar")
+                            if (!string.IsNullOrEmpty(title) && title != "WunderBar")
                             {
                                 apps.Add(new AppInfo 
                                 { 
@@ -461,7 +468,7 @@ namespace MofoBar
         {
             _form.Invoke(() => {
                 var menu = new ContextMenuStrip();
-                var exitItem = menu.Items.Add("Exit MofoBar");
+                var exitItem = menu.Items.Add("Exit WunderBar");
                 exitItem.Click += (s, e) => ExitApp();
                 
                 Point screenPoint = _form.PointToScreen(new Point(x, y));

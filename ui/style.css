@@ -289,18 +289,17 @@ body {
     color: var(--text-secondary);
 }
 
-.mofo-logo {
+.wunder-logo {
     width: 28px;
     height: 28px;
-    border-radius: 6px;
-    margin: 5px;
-    filter: drop-shadow(0 0 8px rgba(0, 120, 212, 0.6));
+    margin-right: 12px;
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.mofo-logo:hover {
-    transform: scale(1.1);
+.wunder-logo:hover {
+    transform: scale(1.15) rotate(5deg);
 }
 
 .app-icon {

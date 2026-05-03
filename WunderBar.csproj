@@ -8,7 +8,8 @@
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>MofoBar.ico</ApplicationIcon>
+    <ApplicationIcon>WunderBar.ico</ApplicationIcon>
+    <AssemblyName>WunderBar</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

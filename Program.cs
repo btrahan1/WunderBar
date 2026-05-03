@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Forms;
 
-namespace MofoBar
+namespace WunderBar
 {
     internal static class Program
     {
