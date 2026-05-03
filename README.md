@@ -39,7 +39,29 @@ WunderBar is a state-of-the-art, high-performance system utility designed to rep
 2. Open `WunderBar.sln` in Visual Studio.
 3. Build and Run in **Release** mode for optimal performance.
 
-## 🛡️ License
+### ⚙️ Startup Configuration (Recommended)
+
+To enable WunderBar to start automatically with Administrative privileges (required for MFT scanning and process management) without a UAC prompt on every boot:
+
+1. Open **PowerShell** as Administrator.
+2. Run the following command (update the path to your `WunderBar.exe`):
+   ```powershell
+   $action = New-ScheduledTaskAction -Execute 'C:\Path\To\WunderBar.exe' -WorkingDirectory 'C:\Path\To\'
+   $trigger = New-ScheduledTaskTrigger -AtLogOn
+   $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
+   Register-ScheduledTask -TaskName "WunderBar" -Action $action -Trigger $trigger -Principal $principal -Force
+   ```
+
+### 🛡️ Antivirus Exclusions
+
+Because WunderBar performs low-level system operations (Direct MFT access), it may be flagged by heuristic scanners. To ensure uninterrupted operation:
+
+1. Open **Windows Security**.
+2. Go to **Virus & threat protection settings** > **Manage settings**.
+3. Scroll to **Exclusions** > **Add or remove exclusions**.
+4. Add the folder where WunderBar is installed.
+
+## ⚖️ License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
