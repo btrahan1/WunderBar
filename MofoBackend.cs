@@ -22,6 +22,7 @@ namespace MofoBar
         private readonly ClipboardService _clipboard = new ClipboardService();
         private readonly MetricsService _metrics = new MetricsService();
         private readonly ProcessService _processes = new ProcessService();
+        private readonly TrayService _tray = new TrayService();
 
         public MofoBackend(MainForm form)
         {
@@ -68,6 +69,9 @@ namespace MofoBar
         public void SuspendProcess(int id) => _processes.SuspendProcess(id);
         public void ResumeProcess(int id) => _processes.ResumeProcess(id);
 
+        public string GetTrayIcons() => JsonSerializer.Serialize(_tray.GetTrayIcons());
+        public void ClickTrayIcon(string name) => _tray.ClickTrayIcon(name);
+
         public void SetClipboard(string text) => _form.Invoke(() => { if (!string.IsNullOrEmpty(text)) Clipboard.SetText(text); });
         public void SetClipboardImage(string imageBase64) => _clipboard.SetClipboardImage(imageBase64);
 
@@ -108,6 +112,26 @@ namespace MofoBar
 
                 menu.Show(Cursor.Position);
             });
+        }
+
+        public void OpenSystemControl(string control)
+        {
+            try
+            {
+                string target = control switch
+                {
+                    "volume" => "ms-settings:apps-volume",
+                    "wifi" => "ms-availablenetworks:",
+                    "battery" => "ms-settings:batterysaver",
+                    "bluetooth" => "ms-settings:bluetooth",
+                    "display" => "ms-settings:display",
+                    "updates" => "ms-settings:windowsupdate",
+                    _ => "ms-settings:home"
+                };
+
+                Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+            }
+            catch { }
         }
 
         public void SimulateWinKey()

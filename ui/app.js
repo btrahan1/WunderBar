@@ -42,9 +42,13 @@ function setupEventListeners() {
     clipboardBtn.addEventListener('click', (e) => {
         mofo.ShowFlyout('clipboard', e.clientX, e.clientY);
     });
-    treeBtn.addEventListener('click', (e) => {
+    document.getElementById('tree-btn').onclick = (e) => {
         mofo.ShowFlyout('tree', e.clientX, e.clientY);
-    });
+    };
+
+    document.getElementById('tray-btn').onclick = (e) => {
+        mofo.ShowFlyout('tray', e.clientX, e.clientY);
+    };
 
     // Listen for backend messages (Clipboard updates)
     window.chrome.webview.addEventListener('message', event => {

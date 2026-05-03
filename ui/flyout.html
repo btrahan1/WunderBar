@@ -47,6 +47,39 @@
         <div id="tree-results" class="results-list"></div>
     </div>
 
+    <div id="tray-panel" class="popover-panel hidden">
+        <div class="panel-header">System Controls</div>
+        <div class="tray-grid">
+            <div class="tray-item" onclick="mofo.OpenSystemControl('volume')">
+                <div class="tray-icon">🔊</div>
+                <div class="tray-name">Volume</div>
+            </div>
+            <div class="tray-item" onclick="mofo.OpenSystemControl('wifi')">
+                <div class="tray-icon">📶</div>
+                <div class="tray-name">Wi-Fi</div>
+            </div>
+            <div class="tray-item" onclick="mofo.OpenSystemControl('bluetooth')">
+                <div class="tray-icon">🦷</div>
+                <div class="tray-name">Bluetooth</div>
+            </div>
+            <div class="tray-item" onclick="mofo.OpenSystemControl('battery')">
+                <div class="tray-icon">🔋</div>
+                <div class="tray-name">Power</div>
+            </div>
+            <div class="tray-item" onclick="mofo.OpenSystemControl('display')">
+                <div class="tray-icon">🖥️</div>
+                <div class="tray-name">Display</div>
+            </div>
+            <div class="tray-item" onclick="mofo.OpenSystemControl('updates')">
+                <div class="tray-icon">🔄</div>
+                <div class="tray-name">Updates</div>
+            </div>
+        </div>
+
+        <div class="panel-header" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">Background Apps</div>
+        <div id="tray-apps" class="results-list" style="max-height: 200px; overflow-y: auto;"></div>
+    </div>
+
     <div id="vitals-panel" class="popover-panel hidden">
         <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
             <span>Task Manager</span>
@@ -64,6 +97,7 @@
         const clipboardPanel = document.getElementById('clipboard-panel');
         const treePanel = document.getElementById('tree-panel');
         const vitalsPanel = document.getElementById('vitals-panel');
+        const trayPanel = document.getElementById('tray-panel');
         const searchInput = document.getElementById('search-input');
         const searchResults = document.getElementById('search-results');
         const clipboardResults = document.getElementById('clipboard-results');
@@ -71,6 +105,7 @@
         const vitalsResults = document.getElementById('vitals-results');
         const vitalsSummary = document.getElementById('vitals-summary');
         const vitalsSearch = document.getElementById('vitals-search');
+        const trayApps = document.getElementById('tray-apps');
         const treePathEl = document.getElementById('tree-path');
         const adminWarning = document.getElementById('admin-warning');
 
@@ -84,11 +119,12 @@
 
         window.showPanel = async (type) => {
             // Optimization: Hide all first to prevent layout flicker
-            [searchPanel, clipboardPanel, treePanel, vitalsPanel].forEach(p => p.classList.add('hidden'));
+            [searchPanel, clipboardPanel, treePanel, vitalsPanel, trayPanel].forEach(p => p.classList.add('hidden'));
             
             const panel = type === 'search' ? searchPanel : 
                          (type === 'clipboard' ? clipboardPanel : 
-                         (type === 'tree' ? treePanel : vitalsPanel));
+                         (type === 'tree' ? treePanel : 
+                         (type === 'vitals' ? vitalsPanel : trayPanel)));
             panel.classList.remove('hidden');
 
             if (type === 'search') {
@@ -111,6 +147,15 @@
                     }
                     refreshVitalsPanel();
                 }, 2000);
+            } else if (type === 'tray') {
+                refreshTrayApps();
+                const interval = setInterval(() => {
+                    if (trayPanel.classList.contains('hidden')) {
+                        clearInterval(interval);
+                        return;
+                    }
+                    refreshTrayApps();
+                }, 5000);
             } else if (type === 'tree') {
                 const isAdmin = await mofo.IsAdmin();
                 adminWarning.classList.toggle('hidden', isAdmin);
@@ -300,6 +345,26 @@
         window.resumeProcess = async (id) => {
             await mofo.ResumeProcess(id);
             refreshVitalsPanel();
+        };
+
+        async function refreshTrayApps() {
+            const icons = JSON.parse(await mofo.GetTrayIcons() || "[]");
+            trayApps.innerHTML = icons.map(icon => `
+                <div class="result-item" onclick="clickTrayIcon('${icon.Name.replace(/'/g, "\\'")}')">
+                    <div class="result-info">
+                        <div class="result-name">💠 ${icon.Name}</div>
+                        <div class="result-path">Background Application</div>
+                    </div>
+                </div>
+            `).join('');
+
+            if (icons.length === 0) {
+                trayApps.innerHTML = '<div style="padding: 20px; text-align: center; opacity: 0.5; font-size: 11px;">No active tray apps detected.</div>';
+            }
+        }
+
+        window.clickTrayIcon = async (name) => {
+            await mofo.ClickTrayIcon(name);
         };
 
         window.showClipMenu = (e, id, img) => {
