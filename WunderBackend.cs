@@ -86,6 +86,9 @@ namespace WunderBar
 
         public void ShowFlyout(string type, int x, int y) => _form.ShowFlyout(type, x, y);
 
+        public void SetTopMost(bool topMost) => _form.Invoke(() => _form.TopMost = topMost);
+        public bool IsTopMost() => _form.TopMost;
+
         public void ShowFileResultMenu(string path, int x, int y)
         {
             _form.Invoke(() => {
@@ -468,6 +471,15 @@ namespace WunderBar
         {
             _form.Invoke(() => {
                 var menu = new ContextMenuStrip();
+                
+                var topMostItem = new ToolStripMenuItem("Always on Top");
+                topMostItem.CheckOnClick = true;
+                topMostItem.Checked = _form.TopMost;
+                topMostItem.Click += (s, e) => SetTopMost(topMostItem.Checked);
+                menu.Items.Add(topMostItem);
+
+                menu.Items.Add(new ToolStripSeparator());
+
                 var exitItem = menu.Items.Add("Exit WunderBar");
                 exitItem.Click += (s, e) => ExitApp();
                 
